@@ -78,8 +78,9 @@ class PanRunner():
         check = input(f"Confirm Executing {cmd} on {self._target} as user {self._username}? [Y/y/N/n]:").lower()
         if "y" in check:
             with ConnectHandler(**self.device) as nc:
-                output = nc.send_command(cmd)
-                self.history.store_baseline(self.device["host"], output)
+                output = nc.send_command_timing(cmd, read_timeout=500, use_genie=True)
+                rd = {"hostname": self.device["host", "cmd_output": output]}
+                self.history.store_baseline(self.device["host"], rd)
                 return output
         else: return "Cancelled"
 
