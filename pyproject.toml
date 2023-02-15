@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools","pyyaml"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "baph"
+description = "A python program to gather Palo Alto buffer utilization"
+readme = "README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+classifiers = [
+    "Development Status::5 Production/Stable",
+    "Environment::Console",
+    "Intended Audience::System Administrators",
+    "Intended Audeience::Telecommunications Industry",
+    "License::OSI Approved::The Unlicense (Unlicense)",
+    "Natural Language::English",
+    "Operating System::POSIX::Linux",
+    "Topic::System::Network::Monitoring"
+]
+dependencies = [
+    "dnspython",
+    "PyYAML",
+    "pandas",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/packetpunter/pybaph"
