@@ -11,33 +11,48 @@ from netmiko import ConnectHandler
 from getpass import getpass
 from enum import StrEnum, auto
 from .Utils import ValidAddress, PanScopeCmd, DataLogger
+from datetime import datetime
 
 class PanRunner():
     
     def __init__(self, target_firewalls):
-        
+        self._target = ValidAddress(target_firewalls)
         self._username = input("Enter username to begin:  ")
-        if len(self._username) == 0: input("Enter valid username:  ")
-        self._target = target_firewalls
-        self._dt = "paloalto_panos"
+        self._secprompt = input("Enter [P] for password authentication or [C] for certificate authentication:  ")
+        now = datetime.now().strftime("%H:%M")
+        self.device = {
+            "device_type": "paloalto_panos",
+            "host": self._target,
+            "username": self._username,
+            "conn_timeout": 80,
+            "session_log": f"Runner_{self._target}_{now}.log"
+        }
+        match self._secprompt:
+            case "P":
+                self.device["password"] = self.set_password()
+            case "C":
+                self._certpath = input(f"Enter FULL path of private key certificate (/home/{self._username}/.ssh/id_rsa): ")
+                self._cpass = getpass(f"Enter passphrase for {self._certpath} if any: ")
+                import os.path
+                _valid_path_check = True
+                while _valid_path_check:
+                    if not os.path.isfile(self._certpath):
+                        print(f"Path {self._certpath} does not reference a file")
+                        self._certpath = input("Enter path proper: ")
+                    else:
+                        _valid_path_check = False
+                self.device["passphrase"] = self._cpass
+                self.device["use_keys"] = True
+                self.device["key_file"] = self._certpath
+
         self.history = DataLogger()
 
     def set_password(self):
         ''' set password for user specified in init'''
-
         self._password = getpass()    
     
     def get_resource_util(self, time_scope, length):
-        
-        real_target = self._target
-        target = real_target
-        device = {
-            "device_type": self._dt,
-            "host": real_target,
-            "username": self._username,
-            "password": ""
-        }
-    
+           
         cmd = ""
         
         #TODO: self.validate_length(time_scope, length)
@@ -45,7 +60,7 @@ class PanRunner():
         match time_scope:
             case "week"|"weeks":
                 cmd = PanScopeCmd.WEEK.format(x=length)
-            case "minute"|"minutes":
+            case "minute"|"minutes"|"mins"|"min":
                 cmd = PanScopeCmd.MINUTE.format(x=length)
             case "hour"|"hours":
                 cmd = PanScopeCmd.HOUR.format(x=length)
@@ -60,13 +75,12 @@ class PanRunner():
         
         #TODO: self._validate_device(device)
 
-        check = input(f"Confirm Executing {cmd} on {target} as user {self._username}? [Y/y/N/n]:").lower()
+        check = input(f"Confirm Executing {cmd} on {self._target} as user {self._username}? [Y/y/N/n]:").lower()
         if "y" in check:
-            device["password"] = self.set_password()
-            #with ConnectHandler(**device) as nc:
-            #    output = nc.send_command(cmd)
-            self.history.store_baseline(device["host"], "fake data right now")
-            return cmd
+            with ConnectHandler(**self.device) as nc:
+                output = nc.send_command(cmd)
+                self.history.store_baseline(self.device["host"], output)
+                return output
         else: return "Cancelled"
 
 
