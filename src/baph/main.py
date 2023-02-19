@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 from netmiko import ConnectHandler
 from getpass import getpass
-from enum import StrEnum, auto
 from .Utils import ValidAddress, PanScopeCmd, DataLogger
 from datetime import datetime
 
@@ -25,12 +24,13 @@ class PanRunner():
             "host": self._target,
             "username": self._username,
             "conn_timeout": 80,
-            "session_log": f"Runner_{self._target}_{now}.log"
+            "session_log": f"Runner_{self._target}_{now}.log",
+            "global_delay_factor": 2,
+            "fast_cli": False
         }
-        match self._secprompt:
-            case "P":
-                self.device["password"] = self.set_password()
-            case "C":
+        if "P" in self._secprompt:
+            self.device["password"] = self.set_password()
+        elif "C" in self._secprompt:
                 self._certpath = input(f"Enter FULL path of private key certificate (/home/{self._username}/.ssh/id_rsa): ")
                 self._cpass = getpass(f"Enter passphrase for {self._certpath} if any: ")
                 import os.path
@@ -44,7 +44,7 @@ class PanRunner():
                 self.device["passphrase"] = self._cpass
                 self.device["use_keys"] = True
                 self.device["key_file"] = self._certpath
-
+         
         self.history = DataLogger()
 
     def set_password(self):
@@ -54,18 +54,18 @@ class PanRunner():
     def get_resource_util(self, time_scope, length):
            
         cmd = ""
-        
+        psc = PanScopeCmd() 
         #TODO: self.validate_length(time_scope, length)
 
         match time_scope:
             case "week"|"weeks":
-                cmd = PanScopeCmd.WEEK.format(x=length)
+                cmd = psc.WEEK.format(x=length)
             case "minute"|"minutes"|"mins"|"min":
-                cmd = PanScopeCmd.MINUTE.format(x=length)
+                cmd = psc.MINUTE.format(x=length)
             case "hour"|"hours":
-                cmd = PanScopeCmd.HOUR.format(x=length)
+                cmd = psc.HOUR.format(x=length)
             case "day"|"days":
-                cmd = PanScopeCmd.DAY.format(x=length)
+                cmd = psc.DAY.format(x=length)
             case "second"|"seconds":
                 print("Second scope is not implemented by this program.")
                 return
@@ -78,7 +78,13 @@ class PanRunner():
         check = input(f"Confirm Executing {cmd} on {self._target} as user {self._username}? [Y/y/N/n]:").lower()
         if "y" in check:
             with ConnectHandler(**self.device) as nc:
-                output = nc.send_command_timing(cmd, read_timeout=500, use_genie=True)
+                output = nc.send_command(
+                        cmd, 
+                        use_genie=True, 
+                        expect_string=r'>',
+                        delay_factor=4,
+                        read_timeout=600,
+                )
                 rd = {"hostname": self.device["host", "cmd_output": output]}
                 self.history.store_baseline(self.device["host"], rd)
                 return output

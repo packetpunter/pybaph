@@ -3,7 +3,7 @@ from ipaddress import ip_network
 from re import search
 import dns.resolver
 from dns.exception import DNSException
-from enum import StrEnum, auto
+#from enum import StrEnum, auto
 from datetime import datetime
 import os
 
@@ -55,12 +55,13 @@ class ValidAddress(str):
         return self.validated_ip
 
 
-class PanScopeCmd(StrEnum):
-    WEEK = "show running resource-monitor week last {x}"
-    DAY = "show running resource-monitor day last {x}"
-    HOUR = "show running resource-monitor hour last {x}"
-    MINUTE = "show running resource-monitor minute last {x}"
-    SECOND = "show running resource-monitor second last {x}"
+class PanScopeCmd():
+    def __init__(self):
+        self.WEEK = "show running resource-monitor week last {x}"
+        self.DAY = "show running resource-monitor day last {x}"
+        self.HOUR = "show running resource-monitor hour last {x}"
+        self.MINUTE = "show running resource-monitor minute last {x}"
+        self.SECOND = "show running resource-monitor second last {x}"
     
     def __repr__(self):
         return self.value
